@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>XROO Package Solution — 사용자 앱 (초안)</title>
+<style>
+/* ===== DESIGN_SYSTEM.md v3.3 토큰 ===== */
+:root{
+  --color-coolgrey-600:#8B8E97;
+  --background:#ffffff;--foreground:#171719;
+  --bg-primary:#FFFFFF;--bg-secondary:#F7F7F8;--bg-tertiary:#F4F4F5;--bg-sidebar:#171719;
+  --bg-brand:#178551;--bg-brand-hover:#136E44;--bg-brand-press:#0F5C39;--bg-brand-subtle:#EAF7F0;
+  --fg-strong:#171719;--fg-default:#2E2F33;--fg-subtle:#46474C;--fg-assistive:#70737C;--fg-disabled:#AEB0B6;--fg-inverse:#FFFFFF;
+  --fg-brand:#178551;--fg-brand-bright:#34C381;
+  --line-default:rgba(112,115,124,0.22);--line-subtle:rgba(112,115,124,0.10);--line-strong:rgba(112,115,124,0.40);
+  --radius-6:6px;--radius-8:8px;--radius-12:12px;--radius-16:16px;--radius-full:9999px;
+  --elevation-1:0 1px 2px rgba(23,23,23,0.06);
+  --elevation-2:0 2px 8px rgba(23,23,23,0.07),0 1px 2px rgba(0,0,0,0.04);
+  --elevation-overlay:0 12px 32px rgba(0,0,0,0.08),0 0 0 1px rgba(112,115,124,0.10);
+  /* §10.4 권장 추가: 에러 토큰 (디자인시스템 컨펌 필요) */
+  --fg-error:#E5484D;--bg-error-subtle:#FDECEC;--line-error:#E5484D;
+  /* 업데이트(attention) 토큰 — amber, 디자인시스템 컨펌 필요 */
+  --fg-warning:#9A6400;--bg-warning-subtle:#FBF0DC;
+  --font-sans:"Pretendard JP Variable","Pretendard Variable","Pretendard JP","Pretendard",-apple-system,BlinkMacSystemFont,"system-ui","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+  --font-mono:"Pretendard JP Variable","Pretendard Variable","SF Mono","JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+html.dark{
+  --background:#111213;--foreground:#F0F1F3;
+  --bg-primary:#1C1D20;--bg-secondary:#111213;--bg-tertiary:#28292E;--bg-sidebar:#0D0E10;
+  --bg-brand:#178551;--bg-brand-hover:#1C9A61;--bg-brand-press:#25AC6E;--bg-brand-subtle:#0C2B1A;
+  --fg-strong:#F0F1F3;--fg-default:#C4C6CC;--fg-subtle:#9B9EA8;--fg-assistive:#82858F;--fg-disabled:#52555F;
+  --fg-brand:#34C381;--fg-brand-bright:#6FD3A0;
+  --line-default:rgba(255,255,255,0.09);--line-subtle:rgba(255,255,255,0.05);--line-strong:rgba(255,255,255,0.18);
+  --elevation-overlay:0 12px 32px rgba(0,0,0,0.5),0 0 0 1px rgba(255,255,255,0.06);
+  --fg-error:#FF6B6E;--bg-error-subtle:#2A1416;--line-error:#FF6B6E;
+  --fg-warning:#E0A23C;--bg-warning-subtle:#2C2310;
+}
+/* typography utilities */
+.t-title-1{font-size:32px;line-height:44px;font-weight:700;letter-spacing:-.81px;}
+.t-title-3{font-size:24px;line-height:32px;font-weight:700;letter-spacing:-.55px;}
+.t-heading-2{font-size:20px;line-height:28px;font-weight:700;letter-spacing:-.24px;}
+.t-label-2{font-size:13px;line-height:18px;font-weight:600;}
+.t-caption-1{font-size:12px;line-height:16px;font-weight:600;}
+.tabular{font-variant-numeric:tabular-nums;}
+
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{font-family:var(--font-sans);background:#0a0a0a;color:var(--foreground);font-size:16px;}
+button{font-family:inherit;cursor:pointer;}
+input{font-family:inherit;}
+svg{display:block;}
+.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* ===== Window chrome (frameless 타이틀바) ===== */
+.win{display:flex;flex-direction:column;height:100vh;overflow:hidden;background:var(--bg-secondary);}
+.titlebar{height:36px;flex-shrink:0;display:flex;align-items:center;background:var(--bg-sidebar);color:#fff;padding:0 0 0 12px;user-select:none;}
+.titlebar .tb-icon{width:14px;height:14px;opacity:.85;margin-right:8px;}
+.titlebar .tb-title{font-size:12px;font-weight:500;color:rgba(255,255,255,.85);}
+.titlebar .tb-controls{margin-left:auto;display:flex;height:100%;}
+.tb-btn{width:46px;height:100%;display:inline-flex;align-items:center;justify-content:center;border:none;background:transparent;color:rgba(255,255,255,.7);}
+.tb-btn:hover{background:rgba(255,255,255,.08);}
+.tb-btn.close:hover{background:#e81123;color:#fff;}
+.tb-btn svg{width:11px;height:11px;}
+.body{flex:1;min-height:0;display:flex;}
+
+/* ===== LOGIN (어드민 로그인 실측 1:1) ===== */
+.login{flex:1;display:flex;min-height:0;}
+/* 좌: 브랜드 패널 — 어드민: w-44%, px-12 pb-12, gradient #0A4429→#0F5C39→#178551 (to-br, oklab) */
+.login-brand{flex:0 0 44%;max-width:44%;position:relative;overflow:hidden;color:#fff;
+  background:linear-gradient(to bottom right in oklab,#0A4429 0%,#0F5C39 50%,#178551 100%);
+  display:flex;flex-direction:column;justify-content:center;align-items:center;padding:0 48px 48px;}
+/* 그리드 오버레이 (opacity .07, white 1px, 40px) */
+.login-brand .grid{position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.07;
+  background-image:linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px);
+  background-size:40px 40px;}
+/* 글로우 2개 (어드민 실측: 우상단 그린.5 / 좌하단 그린.35) — 은은한 자동 모션 */
+.login-brand .glow-tr{position:absolute;z-index:0;top:-128px;right:-128px;width:420px;height:420px;border-radius:50%;
+  background:radial-gradient(circle,rgba(52,195,129,.5),transparent 70%);pointer-events:none;animation:lbGlowA 22s ease-in-out infinite;will-change:transform;}
+.login-brand .glow-bl{position:absolute;z-index:0;bottom:-160px;left:-80px;width:360px;height:360px;border-radius:50%;
+  background:radial-gradient(circle,rgba(52,195,129,.35),transparent 70%);pointer-events:none;animation:lbGlowB 26s ease-in-out infinite;will-change:transform;}
+@keyframes lbGlowA{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-22px,18px) scale(1.07)}}
+@keyframes lbGlowB{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(20px,-16px) scale(1.05)}}
+@media(prefers-reduced-motion:reduce){.login-brand .glow-tr,.login-brand .glow-bl{animation:none;}}
+/* 컨텐츠 — 어드민: max-w 420, 가로 중앙, 세로 center-48px (= mt calc(50vh-158px) 등가) */
+.login-brand .lb-content{position:relative;z-index:1;width:100%;max-width:420px;}
+.login-brand .lb-logo{display:block;height:28px;width:auto;}
+.login-brand .lb-rule{margin-top:16px;width:48px;height:2px;border-radius:9999px;background:#6FD3A0;}
+.login-brand .lb-head{margin-top:24px;font-size:36px;line-height:45px;font-weight:700;letter-spacing:-.9px;color:#fff;}
+.login-brand .lb-sub{margin-top:16px;font-size:15px;line-height:22px;font-weight:500;color:rgba(255,255,255,.7);}
+.login-brand .lb-copy{position:absolute;z-index:1;left:48px;bottom:40px;font-size:12px;font-weight:600;color:rgba(255,255,255,.4);}
+/* 우: 폼 패널 */
+.login-panel{flex:1;min-width:0;background:var(--bg-primary);display:flex;align-items:center;justify-content:center;padding:24px 32px;}
+.login-form{width:100%;max-width:360px;}
+.login-form .cap{font-size:12px;font-weight:700;letter-spacing:.04em;color:var(--fg-brand);}
+.login-form h1{margin-top:6px;font-size:26px;font-weight:700;letter-spacing:-.5px;color:var(--fg-strong);}
+.login-form .sub{margin-top:8px;font-size:13px;font-weight:500;color:var(--fg-assistive);}
+.login-form .field{margin-top:18px;}
+.login-form .field:first-of-type{margin-top:28px;}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--fg-default);margin-bottom:8px;}
+.inp{width:100%;height:44px;border-radius:var(--radius-8);outline:none;font-size:14px;font-weight:500;color:var(--fg-strong);
+  border:1px solid var(--line-strong);background:var(--bg-primary);padding:0 14px;transition:all .15s;}
+.inp::placeholder{color:var(--fg-assistive);}
+.inp:focus{border-color:var(--fg-brand);box-shadow:0 0 0 3px rgba(52,195,129,.2);}
+.inp.err{border-color:var(--line-error);box-shadow:0 0 0 3px rgba(229,72,77,.18);}
+/* 읽기전용(폴더 선택으로 값 결정) — 포커스 상태 없음, 정적 표시 필드 */
+.inp[readonly]{cursor:default;color:var(--fg-subtle);background:var(--bg-secondary);}
+.inp[readonly]:hover,.inp[readonly]:focus{border-color:var(--line-strong);box-shadow:none;}
+/* 인풋 아래 헬퍼/에러 텍스트 */
+.field-help{margin-top:6px;font-size:12px;font-weight:500;line-height:1.4;color:var(--fg-error);display:none;align-items:center;gap:5px;}
+.field-help.show{display:flex;}
+.field-help svg{width:13px;height:13px;flex-shrink:0;}
+.btn-login{margin-top:24px;width:100%;height:48px;border-radius:var(--radius-8);border:none;background:var(--bg-brand);
+  color:#fff;font-size:15px;font-weight:700;transition:background .15s;}
+.btn-login:hover{background:var(--bg-brand-hover);}
+.btn-login:active{background:var(--bg-brand-press);}
+
+/* ===== APP SHELL ===== */
+#app{display:none;flex:1;min-height:0;}
+#app.show{display:flex;}
+.sidebar{width:240px;flex-shrink:0;display:flex;flex-direction:column;background:var(--bg-sidebar);color:var(--fg-inverse);transition:width .15s;}
+.sb-brand{padding:24px 20px 20px;}
+.sb-logo{height:22px;width:auto;}
+.sb-cap{margin-top:12px;font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--fg-brand-bright);}
+.sb-title{margin-top:6px;font-size:22px;font-weight:700;line-height:1.25;letter-spacing:-.01em;color:#fff;}
+.sb-nav{flex:1;padding:8px 12px;display:flex;flex-direction:column;gap:2px;}
+.nav-item{display:flex;align-items:center;gap:12px;padding:0 12px;height:40px;border-radius:var(--radius-8);
+  font-size:14px;font-weight:600;color:var(--color-coolgrey-600);border:none;background:transparent;text-align:left;width:100%;}
+.nav-item:hover{background:rgba(255,255,255,.04);}
+.nav-item.active{background:rgba(255,255,255,.06);color:#fff;}
+.nav-item.active svg{color:var(--fg-brand-bright);}
+.nav-item svg{width:18px;height:18px;color:currentColor;flex-shrink:0;}
+.sb-foot{padding:12px;border-top:1px solid rgba(255,255,255,.08);}
+/* 로그인 계정 + 로그아웃 통합 행 */
+.sb-acct{display:flex;align-items:center;gap:8px;padding:8px;border-radius:var(--radius-12);
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);}
+.sb-acct-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;padding-left:4px;}
+.sb-acct-text .sb-user-id{font-size:13px;font-weight:600;color:#fff;line-height:1.35;}
+.sb-acct-text .sb-user-role{font-size:11px;font-weight:500;color:var(--color-coolgrey-600);line-height:1.3;}
+.sb-logout{flex-shrink:0;width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;
+  border-radius:var(--radius-8);color:var(--fg-assistive);background:none;border:none;transition:all .12s;}
+.sb-logout:hover{color:#fff;background:rgba(255,255,255,.08);}
+.sb-logout svg{width:18px;height:18px;}
+
+/* content */
+.content{flex:1;min-width:0;overflow-y:auto;background:var(--bg-secondary);padding:32px clamp(20px,4vw,40px) 40px;}
+.view{display:none;}
+.view.show{display:block;}
+.cw{max-width:1100px;margin:0 auto;}
+.page-head{display:flex;align-items:center;gap:8px;}
+.page-head h2{font-size:32px;line-height:44px;font-weight:700;letter-spacing:-.81px;color:var(--fg-strong);}
+.count-badge{display:inline-flex;align-items:center;padding:0 13px;height:30px;border-radius:var(--radius-full);background:var(--bg-brand-subtle);color:var(--fg-brand);font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;}
+
+/* buttons */
+.btn{height:38px;padding:0 16px;border-radius:var(--radius-8);font-size:13px;font-weight:700;border:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:all .15s;white-space:nowrap;}
+.btn svg{width:15px;height:15px;}
+.btn-pri{background:var(--bg-brand);color:#fff;}
+.btn-pri:hover{background:var(--bg-brand-hover);}
+.btn-sec{background:var(--bg-primary);color:var(--fg-strong);border:1px solid var(--line-default);}
+.btn-sec:hover{background:var(--bg-tertiary);border-color:var(--line-strong);}
+/* 실행하기 = tonal 그린 (브랜드 통일, 상태 구분) */
+.btn-launch{background:var(--bg-brand-subtle);color:var(--fg-brand);border:1px solid transparent;}
+.btn-launch:hover{filter:brightness(.97);}
+html.dark .btn-launch{background:var(--bg-brand-subtle);color:var(--fg-brand-bright);}
+
+/* card grid (반응형) — 등높이/정렬 통일 */
+.grid{margin-top:24px;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;align-items:stretch;}
+.card{display:flex;flex-direction:column;background:var(--bg-primary);border:1px solid var(--line-default);
+  border-radius:var(--radius-16);overflow:hidden;cursor:pointer;transition:box-shadow .2s,transform .2s,border-color .2s;}
+.card:hover{box-shadow:var(--elevation-2);transform:translateY(-2px);border-color:var(--line-strong);}
+.card:active{transform:translateY(0);box-shadow:var(--elevation-1);}
+.card .thumb{position:relative;aspect-ratio:16/9;width:100%;background-size:cover;background-position:center;flex-shrink:0;}
+.card .meta{flex:1;display:flex;flex-direction:column;padding:16px;}
+/* 상태 뱃지 (타이틀 위 배치) — 어느 표면에서나 동작하는 토널 칩 */
+.pbadge{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 9px;border-radius:var(--radius-full);
+  font-size:11px;font-weight:700;line-height:1;align-self:flex-start;}
+.pbadge .dot{width:6px;height:6px;border-radius:9999px;background:currentColor;}
+.pbadge svg{width:12px;height:12px;}
+.pbadge.none{background:var(--bg-tertiary);color:var(--fg-assistive);}
+.pbadge.installed{background:var(--bg-brand-subtle);color:var(--fg-brand);}
+.pbadge.update{background:var(--bg-warning-subtle);color:var(--fg-warning);}
+.card h3{margin-top:10px;font-size:20px;line-height:28px;font-weight:700;letter-spacing:-.24px;color:var(--fg-strong);}
+.card .desc{margin-top:5px;font-size:12px;font-weight:500;line-height:16px;color:var(--fg-assistive);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:32px;}
+/* 버전·크기 = 레이블+값 스탯 (계층/가독성) */
+.card .spec{margin-top:14px;display:flex;gap:24px;}
+.card .spec .stat{display:flex;flex-direction:column;gap:3px;min-width:0;}
+.card .spec .stat .k{font-size:10px;font-weight:700;letter-spacing:.04em;color:var(--fg-assistive);text-transform:uppercase;}
+.card .spec .stat .v{font-size:13px;font-weight:700;color:var(--fg-strong);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.card .spec .stat .v .arrow{color:var(--fg-warning);font-weight:700;margin:0 2px;}
+.card .foot{margin-top:16px;padding-top:14px;border-top:1px solid var(--line-subtle);}
+.card .foot .btn{width:100%;}
+
+/* detail */
+.detail-hero{margin-top:24px;display:flex;gap:24px;background:var(--bg-primary);border:1px solid var(--line-default);border-radius:var(--radius-16);padding:20px;}
+.detail-hero .thumb{width:340px;flex-shrink:0;aspect-ratio:16/9;border-radius:var(--radius-12);background-size:cover;background-position:center;}
+.detail-hero .info{flex:1;min-width:0;display:flex;flex-direction:column;}
+.detail-hero .d-head{display:flex;align-items:center;gap:10px;}
+.detail-hero h2{font-size:24px;font-weight:700;letter-spacing:-.4px;color:var(--fg-strong);min-width:0;}
+.detail-hero .d-head .pbadge{flex-shrink:0;}
+.detail-hero .desc{margin-top:6px;font-size:13px;font-weight:600;color:var(--fg-assistive);}
+.detail-hero .path{margin-top:12px;font-size:13px;font-weight:600;color:var(--fg-default);}
+.detail-hero .path b{color:var(--fg-brand);font-family:var(--font-mono);}
+.detail-hero .actions{margin-top:auto;padding-top:16px;display:flex;gap:8px;}
+.vtable-wrap{margin-top:16px;background:var(--bg-primary);border:1px solid var(--line-default);border-radius:var(--radius-12);overflow:hidden;}
+table{width:100%;border-collapse:collapse;}
+thead tr{border-bottom:1px solid var(--line-subtle);}
+th{height:44px;padding:10px 16px;text-align:left;font-size:12px;font-weight:600;color:var(--fg-assistive);}
+tbody tr{height:44px;border-bottom:1px solid var(--line-subtle);}
+tbody tr:last-child{border-bottom:none;}
+td{padding:0 16px;font-size:13px;font-weight:600;}
+td.ver{color:var(--fg-strong);}
+td.file{color:var(--fg-default);font-family:var(--font-mono);}
+td.size{color:var(--fg-subtle);}
+td.date{color:var(--fg-subtle);font-family:var(--font-mono);}
+
+/* settings — 그룹형 레이아웃 */
+.settings{margin-top:24px;display:flex;flex-direction:column;gap:28px;max-width:640px;}
+.set-group > h3{font-size:13px;font-weight:700;letter-spacing:.01em;color:var(--fg-subtle);margin-bottom:10px;padding-left:2px;}
+.set-card{background:var(--bg-primary);border:1px solid var(--line-default);border-radius:var(--radius-12);overflow:hidden;}
+.set-card > *{border-bottom:1px solid var(--line-subtle);}
+.set-card > *:last-child{border-bottom:none;}
+.set-stack{padding:18px 20px;}
+.set-label{display:block;font-size:13px;font-weight:600;color:var(--fg-strong);margin-bottom:8px;}
+.set-inline{display:flex;gap:8px;}
+.set-inline .inp{flex:1;min-width:0;}
+.set-help{margin-top:8px;font-size:12px;font-weight:500;line-height:1.5;color:var(--fg-assistive);}
+.btn-44{height:44px;padding:0 18px;flex-shrink:0;}
+.set-row{display:flex;align-items:center;gap:16px;padding:16px 20px;}
+.set-row .label{flex:1;min-width:0;}
+.set-row .label .t{font-size:13px;font-weight:600;color:var(--fg-strong);}
+.set-row .label .d{margin-top:2px;font-size:12px;font-weight:500;color:var(--fg-assistive);}
+.set-row .ctrl{flex-shrink:0;}
+.conn-ok{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--fg-brand);}
+.conn-ok .dot{width:7px;height:7px;border-radius:9999px;background:currentColor;}
+.set-val{font-size:13px;font-weight:600;color:var(--fg-default);font-family:var(--font-mono);}
+
+/* download modal */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:100;}
+.overlay.show{display:flex;}
+.modal{width:100%;max-width:420px;background:var(--bg-primary);border-radius:20px;box-shadow:var(--elevation-overlay);padding:28px;}
+.modal h3{font-size:24px;font-weight:700;letter-spacing:-.4px;color:var(--fg-strong);}
+.modal p{margin-top:8px;font-size:13px;font-weight:500;color:var(--fg-subtle);}
+/* 다운로드/업데이트 진행 모달 (레퍼런스 레이아웃) */
+.modal-dl{max-width:460px;padding:24px;}
+.dl-head{display:flex;align-items:center;gap:14px;}
+.dl-icon{width:50px;height:50px;border-radius:14px;flex-shrink:0;background-size:cover;background-position:center;
+  box-shadow:inset 0 0 0 1px var(--line-subtle);}
+.dl-meta{min-width:0;}
+.dl-name{font-size:20px;font-weight:700;letter-spacing:-.3px;color:var(--fg-strong);line-height:1.3;}
+.dl-size{margin-top:3px;font-size:13px;font-weight:600;color:var(--fg-assistive);font-variant-numeric:tabular-nums;}
+.dl-divider{position:relative;margin:20px -2px;height:1px;
+  background:linear-gradient(90deg,transparent,var(--line-default) 28%,var(--line-default) 72%,transparent);}
+.dl-divider::after{content:"";position:absolute;left:50%;top:-10px;transform:translateX(-50%);width:58%;height:20px;
+  background:radial-gradient(ellipse at center,var(--bg-brand-subtle),transparent 70%);opacity:.65;}
+.dl-progress{position:relative;background:var(--bg-secondary);border:1px solid var(--line-subtle);border-radius:16px;padding:14px 16px;}
+.dl-status{display:flex;align-items:center;gap:10px;}
+.dl-spinner{width:16px;height:16px;border-radius:50%;flex-shrink:0;
+  border:2px solid var(--bg-brand-subtle);border-top-color:var(--fg-brand);animation:spin .8s linear infinite;}
+.dl-label{font-size:14px;font-weight:600;color:var(--fg-strong);}
+.dl-pct{margin-left:auto;font-size:13px;font-weight:700;color:var(--fg-brand);font-variant-numeric:tabular-nums;}
+.dl-bar{margin-top:12px;height:10px;border-radius:var(--radius-full);background:var(--bg-tertiary);overflow:hidden;}
+.dl-bar-fill{height:100%;width:0%;border-radius:var(--radius-full);background:var(--bg-brand);transition:width .2s;
+  box-shadow:0 0 10px rgba(23,133,81,.45);}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* toast */
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);opacity:0;
+  background:var(--bg-inverse,#171719);color:var(--fg-inverse,#fff);padding:10px 18px;border-radius:var(--radius-8);
+  font-size:13px;font-weight:600;box-shadow:var(--elevation-overlay);z-index:200;transition:all .25s;pointer-events:none;}
+html.dark .toast{background:#F0F1F3;color:#171719;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ===== 테마 토글 (시스템/라이트/다크) ===== */
+.theme-seg{display:inline-flex;padding:3px;gap:2px;border-radius:var(--radius-8);background:rgba(255,255,255,.06);}
+.theme-seg button{height:30px;min-width:34px;padding:0 10px;border:none;background:transparent;border-radius:6px;
+  color:var(--color-coolgrey-600);font-size:12px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:all .12s;}
+.theme-seg button:hover{color:#fff;}
+.theme-seg button.active{background:rgba(255,255,255,.12);color:#fff;}
+.theme-seg button svg{width:15px;height:15px;}
+/* 라이트 표면(환경설정)용 변형 */
+.theme-seg.on-light{background:var(--bg-tertiary);}
+.theme-seg.on-light button{color:var(--fg-assistive);}
+.theme-seg.on-light button:hover{color:var(--fg-strong);}
+.theme-seg.on-light button.active{background:var(--bg-primary);color:var(--fg-strong);box-shadow:var(--elevation-1);}
+.sb-foot .theme-seg{width:100%;justify-content:space-between;margin-bottom:8px;}
+.sb-foot .theme-seg button{flex:1;}
+
+/* ===== 확인 다이얼로그 ===== */
+.modal-confirm{max-width:360px;padding:26px;}
+.modal-confirm .m-icon{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;
+  background:var(--bg-tertiary);color:var(--fg-subtle);margin-bottom:18px;}
+.modal-confirm .m-icon svg{width:23px;height:23px;}
+.modal-confirm h3{font-size:19px;font-weight:700;letter-spacing:-.3px;color:var(--fg-strong);}
+.modal-confirm p{margin-top:8px;font-size:13px;font-weight:500;line-height:1.6;color:var(--fg-subtle);}
+.modal-actions{margin-top:22px;display:flex;gap:8px;}
+.modal-actions .btn{flex:1;height:44px;}
+
+/* ===== 반응형 ===== */
+/* 로그인: lg(1024) 미만이면 브랜드 패널 숨기고 폼만 (어드민 hidden lg:flex 동일) */
+@media(max-width:1023px){
+  .login-brand{display:none;}
+  .login-panel{flex:1;background:var(--bg-secondary);}
+}
+@media(max-width:860px){
+  .sidebar{width:64px;}
+  .sb-brand{padding:20px 8px;text-align:center;}
+  .sb-cap,.sb-title{display:none;}
+  .sb-logo{height:auto;width:40px;margin:0 auto;}
+  .nav-item{justify-content:center;padding:0;}
+  .nav-item .label{display:none;}
+  .sb-acct{justify-content:center;padding:4px;background:none;border:none;}
+  .sb-acct-text{display:none;}
+  .sb-foot .theme-seg{display:none;}
+}
+@media(max-width:680px){
+  .detail-hero{flex-direction:column;}
+  .detail-hero .thumb{width:100%;}
+  td.file,th.file{display:none;}
+}
+</style>
+<script>
+/* 첫 페인트 전 테마 적용 (시스템/라이트/다크) — 로그인부터 OS 설정 반영, 플래시 방지 */
+(function(){try{var m=localStorage.getItem('xroo-theme-mode')||'system';var d=m==='dark'||(m==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(d)document.documentElement.classList.add('dark');}catch(e){}})();
+</script>
+</head>
+<body>
+<div class="win">
+  <!-- 타이틀바 -->
+  <div class="titlebar">
+    <svg class="tb-icon" viewBox="0 0 24 24" fill="none" stroke="#34C381" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/></svg>
+    <span class="tb-title">XROO Package Solution</span>
+    <div class="tb-controls">
+      <button class="tb-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg></button>
+      <button class="tb-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="5" width="14" height="14" rx="1"/></svg></button>
+      <button class="tb-btn close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+  </div>
+
+  <div class="body">
+    <!-- ===== LOGIN (2단 스플릿) ===== -->
+    <div class="login" id="login">
+      <!-- 좌: 브랜드 그래픽 -->
+      <div class="login-brand" id="loginBrand">
+        <div class="grid"></div>
+        <span class="glow-tr"></span>
+        <span class="glow-bl"></span>
+        <div class="lb-content">
+        <svg class="lb-logo" viewBox="0 0 396 100" fill="none" aria-label="XROO"><path d="M241.07 0C268.68 0 291.07 22.39 291.07 50C291.07 77.61 268.68 100 241.07 100C213.46 100 191.07 77.61 191.07 50C191.07 22.39 213.46 0 241.07 0ZM345.07 0C372.68 0 395.07 22.39 395.07 50C395.07 77.61 372.68 100 345.07 100C317.46 100 295.07 77.61 295.07 50C295.07 22.39 317.46 0 345.07 0ZM24.5231 2C24.8429 2.00015 25.1428 2.15028 25.3327 2.41016L47.0426 32.1699L68.7428 2.41016C68.9328 2.15022 69.2325 2.00007 69.5524 2H93.0729C93.8827 2.00021 94.3624 2.92992 93.8825 3.58984L60.0329 50L93.8727 96.4102C94.3526 97.0701 93.8821 98 93.0622 98H69.5426C69.2227 98 68.9231 97.8498 68.7331 97.5898L47.0329 67.8301L25.3327 97.5898C25.1428 97.8497 24.8429 97.9999 24.5231 98H1.0026C0.192621 98 -0.286964 97.0701 0.193028 96.4102L34.0329 50L0.193028 3.58984C-0.286964 2.92985 0.182622 2.00003 1.0026 2H24.5231ZM147.039 2C165.819 2 181.039 17.22 181.039 36C181.039 49.3799 173.309 60.95 162.069 66.5L183.879 96.4102C184.359 97.0701 183.889 97.9998 183.069 98H159.548C159.229 97.9999 158.929 97.8498 158.739 97.5898L138.619 70H124.039V97C124.039 97.55 123.589 98 123.039 98H105.039C104.489 98 104.039 97.55 104.039 97V3C104.039 2.45001 104.489 2.00001 105.039 2H147.039ZM241.07 20C224.5 20 211.07 33.43 211.07 50C211.07 66.57 224.5 80 241.07 80C257.64 80 271.07 66.57 271.07 50C271.07 33.43 257.64 20 241.07 20ZM345.07 20C328.5 20 315.07 33.43 315.07 50C315.07 66.57 328.5 80 345.07 80C361.64 80 375.07 66.57 375.07 50C375.07 33.43 361.64 20 345.07 20ZM124.039 50H147.048C154.768 50 161.039 43.73 161.039 36C161.039 28.27 154.769 22 147.039 22H124.039V50Z" fill="white"/></svg>
+        <div class="lb-rule"></div>
+        <div class="lb-head">Package Solution<br/>User Console</div>
+        <div class="lb-sub">최신 빌드를 자동으로 확인하고,<br/>다운로드부터 실행까지 한 번에.</div>
+        </div>
+        <div class="lb-copy">© 2026 XROO · OLIM PLANET</div>
+      </div>
+      <!-- 우: 로그인 폼 -->
+      <div class="login-panel">
+        <div class="login-form">
+          <h1>사용자 로그인</h1>
+          <div class="sub">계정으로 로그인해 프로젝트를 확인하세요.</div>
+          <div class="field">
+            <label>아이디</label>
+            <input class="inp" id="uid" placeholder="아이디를 입력하세요" value="test001" />
+            <p class="field-help" id="idHelp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg><span></span></p>
+          </div>
+          <div class="field">
+            <label>비밀번호</label>
+            <input class="inp" id="upw" type="password" placeholder="비밀번호를 입력하세요" />
+            <p class="field-help" id="pwHelp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg><span></span></p>
+          </div>
+          <button class="btn-login" id="btnLogin">로그인</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== APP ===== -->
+    <div id="app">
+      <aside class="sidebar">
+        <div class="sb-brand">
+          <svg class="sb-logo" viewBox="0 0 396 100" fill="none" aria-label="XROO"><path d="M241.07 0C268.68 0 291.07 22.39 291.07 50C291.07 77.61 268.68 100 241.07 100C213.46 100 191.07 77.61 191.07 50C191.07 22.39 213.46 0 241.07 0ZM345.07 0C372.68 0 395.07 22.39 395.07 50C395.07 77.61 372.68 100 345.07 100C317.46 100 295.07 77.61 295.07 50C295.07 22.39 317.46 0 345.07 0ZM24.5231 2C24.8429 2.00015 25.1428 2.15028 25.3327 2.41016L47.0426 32.1699L68.7428 2.41016C68.9328 2.15022 69.2325 2.00007 69.5524 2H93.0729C93.8827 2.00021 94.3624 2.92992 93.8825 3.58984L60.0329 50L93.8727 96.4102C94.3526 97.0701 93.8821 98 93.0622 98H69.5426C69.2227 98 68.9231 97.8498 68.7331 97.5898L47.0329 67.8301L25.3327 97.5898C25.1428 97.8497 24.8429 97.9999 24.5231 98H1.0026C0.192621 98 -0.286964 97.0701 0.193028 96.4102L34.0329 50L0.193028 3.58984C-0.286964 2.92985 0.182622 2.00003 1.0026 2H24.5231ZM147.039 2C165.819 2 181.039 17.22 181.039 36C181.039 49.3799 173.309 60.95 162.069 66.5L183.879 96.4102C184.359 97.0701 183.889 97.9998 183.069 98H159.548C159.229 97.9999 158.929 97.8498 158.739 97.5898L138.619 70H124.039V97C124.039 97.55 123.589 98 123.039 98H105.039C104.489 98 104.039 97.55 104.039 97V3C104.039 2.45001 104.489 2.00001 105.039 2H147.039ZM241.07 20C224.5 20 211.07 33.43 211.07 50C211.07 66.57 224.5 80 241.07 80C257.64 80 271.07 66.57 271.07 50C271.07 33.43 257.64 20 241.07 20ZM345.07 20C328.5 20 315.07 33.43 315.07 50C315.07 66.57 328.5 80 345.07 80C361.64 80 375.07 66.57 375.07 50C375.07 33.43 361.64 20 345.07 20ZM124.039 50H147.048C154.768 50 161.039 43.73 161.039 36C161.039 28.27 154.769 22 147.039 22H124.039V50Z" fill="white"/></svg>
+          <div class="sb-cap">XROO PACKAGE SOLUTION</div>
+          <div class="sb-title">사용자 앱</div>
+        </div>
+        <nav class="sb-nav">
+          <button class="nav-item active" data-nav="list"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></svg><span class="label">프로젝트 리스트</span></button>
+          <button class="nav-item" data-nav="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z"/><circle cx="12" cy="12" r="3"/></svg><span class="label">환경설정</span></button>
+        </nav>
+        <div class="sb-foot">
+          <div class="theme-seg" id="themeSegBar" aria-label="테마 전환">
+            <button data-theme="system" title="시스템"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></button>
+            <button data-theme="light" title="라이트"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg></button>
+            <button data-theme="dark" title="다크"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></button>
+          </div>
+          <div class="sb-acct">
+            <div class="sb-acct-text">
+              <span class="sb-user-id" id="sbUserId">test001</span>
+              <span class="sb-user-role">로그인 계정</span>
+            </div>
+            <button class="sb-logout" id="btnLogout" title="로그아웃" aria-label="로그아웃"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/></svg></button>
+          </div>
+        </div>
+      </aside>
+
+      <div class="content">
+        <!-- LIST -->
+        <div class="view show" id="view-list">
+          <div class="cw">
+            <div class="page-head">
+              <h2>프로젝트 리스트</h2>
+              <span class="count-badge" id="listCount">3개</span>
+              <button class="btn btn-sec" id="btnRefresh" style="margin-left:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>새로고침</button>
+            </div>
+            <div class="grid" id="cardGrid"></div>
+          </div>
+        </div>
+
+        <!-- DETAIL -->
+        <div class="view" id="view-detail">
+          <div class="cw" id="detailBody"></div>
+        </div>
+
+        <!-- SETTINGS -->
+        <div class="view" id="view-settings">
+          <div class="cw">
+            <div class="page-head"><h2>환경설정</h2></div>
+            <div class="settings">
+
+              <section class="set-group">
+                <h3>화면</h3>
+                <div class="set-card">
+                  <div class="set-row">
+                    <div class="label"><div class="t">테마</div><div class="d">시스템 설정을 따르거나 직접 선택합니다.</div></div>
+                    <div class="ctrl">
+                      <div class="theme-seg on-light" id="themeSegSet" aria-label="테마 전환">
+                        <button data-theme="system">시스템</button>
+                        <button data-theme="light">라이트</button>
+                        <button data-theme="dark">다크</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="set-group">
+                <h3>연결</h3>
+                <div class="set-card">
+                  <div class="set-stack">
+                    <label class="set-label">서버 주소</label>
+                    <div class="set-inline">
+                      <input class="inp" value="http://192.168.1.57:6969" />
+                      <button class="btn btn-pri btn-44" data-toast="서버 주소를 저장했습니다.">저장</button>
+                    </div>
+                    <p class="set-help">패키지를 내려받는 서버의 주소입니다.</p>
+                  </div>
+                  <div class="set-row">
+                    <div class="label"><div class="t">연결 상태</div></div>
+                    <div class="ctrl"><span class="conn-ok"><span class="dot"></span>연결됨</span></div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="set-group">
+                <h3>다운로드</h3>
+                <div class="set-card">
+                  <div class="set-stack">
+                    <label class="set-label">다운로드 폴더</label>
+                    <div class="set-inline">
+                      <input class="inp" id="dlFolderPath" value="C:\Users\OLIM_Jasper\Downloads" readonly tabindex="-1" />
+                      <button class="btn btn-sec btn-44" id="btnPickFolder">폴더 선택</button>
+                    </div>
+                    <p class="set-help">다운로드한 패키지가 저장되고 실행되는 위치입니다.</p>
+                  </div>
+                  <div class="set-row">
+                    <div class="label"><div class="t">다운로드 폴더 열기</div><div class="d">탐색기에서 폴더를 엽니다.</div></div>
+                    <div class="ctrl"><button class="btn btn-sec" id="btnOpenFolder">열기</button></div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="set-group">
+                <h3>계정</h3>
+                <div class="set-card">
+                  <div class="set-row">
+                    <div class="label"><div class="t">로그인 계정</div><div class="d">현재 로그인한 사용자입니다.</div></div>
+                    <div class="ctrl"><span class="set-val">test001</span></div>
+                  </div>
+                  <div class="set-row">
+                    <div class="label"><div class="t">로그아웃</div><div class="d">앱에서 로그아웃합니다.</div></div>
+                    <div class="ctrl"><button class="btn btn-sec" id="setLogout">로그아웃</button></div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="set-group">
+                <h3>정보</h3>
+                <div class="set-card">
+                  <div class="set-row">
+                    <div class="label"><div class="t">앱 버전</div></div>
+                    <div class="ctrl"><span class="set-val">v1.0.0</span></div>
+                  </div>
+                </div>
+              </section>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 로그아웃 확인 다이얼로그 -->
+<div class="overlay" id="confirmOverlay">
+  <div class="modal modal-confirm">
+    <div class="m-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/></svg></div>
+    <h3>로그아웃</h3>
+    <p>정말 로그아웃하시겠어요?<br/>다시 로그인하려면 계정 정보를 입력해야 합니다.</p>
+    <div class="modal-actions">
+      <button class="btn btn-sec" id="confirmCancel">취소</button>
+      <button class="btn btn-pri" id="confirmOk">로그아웃</button>
+    </div>
+  </div>
+</div>
+
+<!-- download/update progress modal -->
+<div class="overlay" id="dlOverlay">
+  <div class="modal modal-dl">
+    <div class="dl-head">
+      <div class="dl-icon" id="dlIcon"></div>
+      <div class="dl-meta">
+        <div class="dl-name truncate" id="dlName">프로젝트</div>
+        <div class="dl-size" id="dlSize">0 KB</div>
+      </div>
+    </div>
+    <div class="dl-divider"></div>
+    <div class="dl-progress">
+      <div class="dl-status">
+        <span class="dl-spinner"></span>
+        <span class="dl-label" id="dlLabel">다운로드 중…</span>
+        <span class="dl-pct" id="dlPct">0%</span>
+      </div>
+      <div class="dl-bar"><div class="dl-bar-fill" id="dlFill"></div></div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===== 샘플 데이터 ===== */
+const THUMBS=[
+  'linear-gradient(135deg,#5b7a8c,#2f4a5a)',
+  'linear-gradient(135deg,#4a4a4a,#1c1c1c)',
+  'linear-gradient(135deg,#c9b79c,#8a7a64)'
+];
+const projects=[
+  {id:1,name:'테스트',desc:'니가 참 좋아 짝짝짝',version:'v1',size:'0.1 MB',exe:'Windows/Songdo_TheSharp.exe',state:'none',
+   history:[{v:'v1',file:'96ad15d8-52e7-462e-9e89-ff466d015ed7_v1.zip',size:'0.1 MB',date:'2026-06-04 05:44:04'}]},
+  {id:2,name:'Showroom VR',desc:'VR 쇼룸 인터랙티브 데모 패키지',version:'v5',size:'2.1 GB',exe:'Windows/ShowroomVR.exe',state:'ready',
+   history:[{v:'v5',file:'a1b2c3d4-showroom_v5.zip',size:'2.1 GB',date:'2026-05-30 11:20:10'},{v:'v4',file:'a1b2c3d4-showroom_v4.zip',size:'2.0 GB',date:'2026-04-18 09:02:33'}]},
+  {id:3,name:'Metaverse Expo',desc:'전시 부스 메타버스 빌드',version:'v2',size:'5.6 GB',exe:'Windows/MetaverseExpo.exe',state:'update',installed:'v1',
+   history:[{v:'v2',file:'expo-9f8e7d_v2.zip',size:'5.6 GB',date:'2026-06-01 14:10:00'},{v:'v1',file:'expo-9f8e7d_v1.zip',size:'5.4 GB',date:'2026-05-10 16:45:21'}]},
+];
+
+const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),1800);}
+
+/* ===== 로그인 (인풋 아래 헬퍼 텍스트로 에러 표시) ===== */
+function setHelp(field,msg){const el=$('#'+field+'Help');el.querySelector('span').textContent=msg;el.classList.add('show');}
+function clearHelp(field){const inp=field==='id'?$('#uid'):$('#upw');$('#'+field+'Help').classList.remove('show');inp.classList.remove('err');}
+function clearAllHelp(){clearHelp('id');clearHelp('pw');}
+$('#btnLogin').addEventListener('click',()=>{
+  const id=$('#uid'),pw=$('#upw');let ok=true;
+  if(!id.value.trim()){ setHelp('id','아이디를 입력해 주세요.'); id.classList.add('err'); ok=false; }
+  if(!pw.value.trim()){ setHelp('pw','비밀번호를 입력해 주세요.'); pw.classList.add('err'); ok=false; }
+  if(!ok){ (!id.value.trim()?id:pw).focus(); return; }
+  clearAllHelp();
+  $('#sbUserId').textContent=id.value.trim();
+  $('#login').style.display='none'; $('#app').classList.add('show');
+  renderCards();
+});
+$('#uid').addEventListener('input',()=>clearHelp('id'));
+$('#upw').addEventListener('input',()=>clearHelp('pw'));
+/* 로그인 좌측 패널 글로시 효과는 CSS 자동 루프(오로라+글로우)로 동작 — JS 불필요 */
+function doLogout(){$('#app').classList.remove('show');$('#login').style.display='flex';$('#upw').value='';clearAllHelp();}
+/* 로그아웃 확인 다이얼로그 */
+function openLogoutConfirm(){$('#confirmOverlay').classList.add('show');}
+function closeConfirm(){$('#confirmOverlay').classList.remove('show');}
+$('#btnLogout').addEventListener('click',openLogoutConfirm);
+$('#setLogout').addEventListener('click',openLogoutConfirm);
+$('#confirmCancel').addEventListener('click',closeConfirm);
+$('#confirmOk').addEventListener('click',()=>{closeConfirm();doLogout();});
+$('#confirmOverlay').addEventListener('click',e=>{if(e.target.id==='confirmOverlay')closeConfirm();});
+/* 환경설정 버튼 토스트 */
+$$('[data-toast]').forEach(b=>b.addEventListener('click',()=>toast(b.dataset.toast)));
+
+/* ===== 폴더 열기/선택 (Electron 실연동, 브라우저는 폴백) ===== */
+function getElectron(){try{return window.require('electron');}catch(_){return null;}}
+/* 다운로드 폴더를 윈도우 탐색기로 열기 */
+$('#btnOpenFolder').addEventListener('click',()=>{
+  const path=$('#dlFolderPath').value;
+  const el=getElectron();
+  if(el&&el.shell){ el.shell.openPath(path); toast('폴더를 열었습니다.'); }
+  else { toast('데스크탑(Electron) 빌드에서 탐색기로 열립니다.'); }
+});
+/* 다운로드 폴더 선택 (Electron 폴더 선택 다이얼로그) */
+$('#btnPickFolder').addEventListener('click',async()=>{
+  const el=getElectron();
+  try{
+    // @electron/remote 또는 ipcRenderer.invoke('dialog:openDirectory') 로 메인 프로세스 다이얼로그 호출
+    const remote=el&&(el.remote||(window.require&&window.require('@electron/remote')));
+    if(remote&&remote.dialog){
+      const r=await remote.dialog.showOpenDialog({properties:['openDirectory']});
+      if(!r.canceled&&r.filePaths[0]){ $('#dlFolderPath').value=r.filePaths[0]; toast('다운로드 폴더를 변경했습니다.'); }
+      return;
+    }
+    if(el&&el.ipcRenderer){
+      const p=await el.ipcRenderer.invoke('dialog:openDirectory');
+      if(p){ $('#dlFolderPath').value=p; toast('다운로드 폴더를 변경했습니다.'); }
+      return;
+    }
+    toast('데스크탑(Electron) 빌드에서 폴더 선택 창이 열립니다.');
+  }catch(_){ toast('데스크탑(Electron) 빌드에서 폴더 선택 창이 열립니다.'); }
+});
+
+/* ===== 테마 전환 (시스템/라이트/다크) — 어드민과 동일 키 ===== */
+const THEME_KEY='xroo-theme-mode';
+const mql=window.matchMedia('(prefers-color-scheme: dark)');
+function applyTheme(){
+  const mode=localStorage.getItem(THEME_KEY)||'system';
+  const dark=mode==='dark'||(mode==='system'&&mql.matches);
+  document.documentElement.classList.toggle('dark',dark);
+  $$('[data-theme]').forEach(b=>b.classList.toggle('active',b.dataset.theme===mode));
+}
+function setTheme(mode){localStorage.setItem(THEME_KEY,mode);applyTheme();}
+$$('[data-theme]').forEach(b=>b.addEventListener('click',()=>setTheme(b.dataset.theme)));
+mql.addEventListener('change',()=>{if((localStorage.getItem(THEME_KEY)||'system')==='system')applyTheme();});
+applyTheme();
+
+/* ===== nav ===== */
+$$('.nav-item').forEach(n=>n.addEventListener('click',()=>{
+  $$('.nav-item').forEach(x=>x.classList.toggle('active',x===n));
+  showView(n.dataset.nav);
+}));
+/* 새로고침 = 페이지 헤더 액션 */
+$('#btnRefresh').addEventListener('click',()=>{toast('목록을 새로고침했습니다.');renderCards();});
+function showView(v){$$('.view').forEach(x=>x.classList.remove('show'));$('#view-'+v).classList.add('show');$('.content').scrollTop=0;}
+function setActiveNav(v){$$('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.nav===v));}
+
+/* ===== 액션 버튼 (상태별) ===== */
+function actionBtn(p,where){
+  if(p.state==='none') return `<button class="btn btn-pri" data-act="download" data-id="${p.id}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg>다운로드</button>`;
+  if(p.state==='update') return `<button class="btn btn-pri" data-act="download" data-id="${p.id}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4M12 16V8"/></svg>업데이트</button>`;
+  return `<button class="btn btn-launch" data-act="run" data-id="${p.id}"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M8 5v14l11-7z"/></svg>실행하기</button>`;
+}
+/* 상태 뱃지 (타이틀 위 배치) */
+function statusChip(p){
+  if(p.state==='update') return `<span class="pbadge update"><span class="dot"></span>업데이트 필요</span>`;
+  if(p.state==='ready')  return `<span class="pbadge installed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>설치됨</span>`;
+  return `<span class="pbadge none"><span class="dot"></span>미설치</span>`;
+}
+/* 버전 표기 (업데이트면 설치본→최신 표기) */
+function verDisplay(p){return p.state==='update'&&p.installed?`${p.installed}<span class="arrow">→</span>${p.version}`:p.version;}
+
+/* ===== 카드 렌더 ===== */
+function renderCards(){
+  $('#listCount').textContent=projects.length+'개';
+  $('#cardGrid').innerHTML=projects.map((p,i)=>`
+    <article class="card" data-act="detail" data-id="${p.id}">
+      <div class="thumb" style="background:${THUMBS[i%THUMBS.length]}"></div>
+      <div class="meta">
+        ${statusChip(p)}
+        <h3 class="truncate">${p.name}</h3>
+        <div class="desc">${p.desc}</div>
+        <div class="spec">
+          <div class="stat"><span class="k">버전</span><span class="v">${verDisplay(p)}</span></div>
+          <div class="stat"><span class="k">크기</span><span class="v">${p.size}</span></div>
+        </div>
+        <div class="foot">${actionBtn(p,'card')}</div>
+      </div>
+    </article>`).join('');
+}
+
+/* ===== 상세 렌더 ===== */
+function renderDetail(p,i){
+  $('#detailBody').innerHTML=`
+    <button class="btn btn-sec back-btn" data-act="backlist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>목록</button>
+    <div class="detail-hero">
+      <div class="thumb" style="background:${THUMBS[i%THUMBS.length]}"></div>
+      <div class="info">
+        <div class="d-head"><h2 class="truncate">${p.name}</h2>${statusChip(p)}</div>
+        <div class="desc">${p.desc}</div>
+        <div class="path">실행파일 위치: <b>${p.exe}</b></div>
+        <div class="actions">${actionBtn(p,'detail')}</div>
+      </div>
+    </div>
+    <div class="vtable-wrap">
+      <table>
+        <thead><tr><th style="width:80px">버전</th><th class="file">파일</th><th style="width:120px">크기</th><th style="width:200px">업로드</th></tr></thead>
+        <tbody>${p.history.map(h=>`<tr><td class="ver">${h.v}</td><td class="file">${h.file}</td><td class="size">${h.size}</td><td class="date">${h.date}</td></tr>`).join('')}</tbody>
+      </table>
+    </div>`;
+}
+
+/* ===== 클릭 위임 (다운로드/실행/상세/목록) ===== */
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-act]'); if(!b)return;
+  const act=b.dataset.act, id=+b.dataset.id, p=projects.find(x=>x.id===id), i=projects.findIndex(x=>x.id===id);
+  if(act==='detail'){setActiveNav('list');showView('detail');renderDetail(p,i);}
+  else if(act==='backlist'){setActiveNav('list');showView('list');}
+  else if(act==='run'){toast(`${p.name} 실행 중…`);}
+  else if(act==='download'){runDownload(p,i);}
+});
+
+/* ===== 다운로드 + 압축해제 플로우 ===== */
+function runDownload(p,i){
+  const ov=$('#dlOverlay'),fill=$('#dlFill'),pct=$('#dlPct'),label=$('#dlLabel');
+  const verb=p.state==='update'?'업데이트':'다운로드';
+  $('#dlName').textContent=p.name;
+  $('#dlSize').textContent=p.size;
+  $('#dlIcon').style.background=THUMBS[i%THUMBS.length];
+  $('#dlIcon').style.backgroundSize='cover';
+  ov.classList.add('show'); label.textContent=verb+' 중…'; fill.style.width='0%'; pct.textContent='0%';
+  let v=0;
+  const step1=setInterval(()=>{
+    v+=Math.random()*18+7; if(v>=100){v=100;}
+    fill.style.width=v+'%'; pct.textContent=Math.floor(v)+'%';
+    if(v>=100){clearInterval(step1); setTimeout(extract,350);}
+  },180);
+  function extract(){
+    label.textContent='압축 해제 중…'; let e=0;
+    fill.style.width='0%'; pct.textContent='0%';
+    const step2=setInterval(()=>{
+      e+=Math.random()*16+6; if(e>=100){e=100;}
+      fill.style.width=e+'%'; pct.textContent=Math.floor(e)+'%';
+      if(e>=100){clearInterval(step2); setTimeout(()=>{
+        ov.classList.remove('show');
+        p.state='ready'; if(p.installed)p.installed=p.version;
+        renderCards();
+        if($('#view-detail').classList.contains('show'))renderDetail(p,i);
+        toast(`${p.name} ${verb} 완료`);
+      },350);}
+    },170);
+  }
+}
+</script>
+</body>
+</html>
