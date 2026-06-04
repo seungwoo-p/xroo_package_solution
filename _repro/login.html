@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ko" class="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>XROO 관리자 콘솔 (재현)</title>
+<style>
+/* =========================================================
+   DESIGN_SYSTEM.md §11.1 globals.css 토큰 (그대로 붙여넣음)
+   ========================================================= */
+:root {
+  /* Primary */
+  --color-primary-50:#EAF7F0;--color-primary-100:#D6F0E2;--color-primary-200:#A9E4C5;
+  --color-primary-300:#6FD3A0;--color-primary-400:#34C381;--color-primary-500:#25AC6E;
+  --color-primary-600:#1C9A61;--color-primary-700:#178551;--color-primary-800:#136E44;
+  --color-primary-900:#0F5C39;--color-primary-1000:#0A4429;
+  /* CoolGrey */
+  --color-coolgrey-50:#F7F7F8;--color-coolgrey-100:#F4F4F5;--color-coolgrey-200:#EAEBEC;
+  --color-coolgrey-400:#C2C4C8;--color-coolgrey-500:#AEB0B6;--color-coolgrey-600:#8B8E97;
+  --color-coolgrey-700:#70737C;--color-coolgrey-1350:#171719;
+  /* Semantic - Light */
+  --background:#ffffff;--foreground:#171719;
+  --bg-primary:#FFFFFF;--bg-secondary:#F7F7F8;--bg-tertiary:#F4F4F5;
+  --bg-sidebar:#171719;--bg-inverse:#171719;
+  --bg-brand:#178551;--bg-brand-hover:#136E44;--bg-brand-press:#0F5C39;--bg-brand-subtle:#EAF7F0;
+  --fg-primary:#000000;--fg-strong:#171719;--fg-default:#2E2F33;--fg-subtle:#46474C;
+  --fg-assistive:#70737C;--fg-disabled:#AEB0B6;--fg-inverse:#FFFFFF;
+  --fg-brand:#178551;--fg-brand-bright:#34C381;
+  --line-default:rgba(112,115,124,0.22);--line-subtle:rgba(112,115,124,0.10);
+  --line-strong:rgba(112,115,124,0.40);--line-accent:#178551;
+  --input:rgba(112,115,124,0.40);--input-background:#ffffff;--ring:#178551;
+  --radius:0.5rem;--radius-6:6px;--radius-8:8px;--radius-12:12px;--radius-16:16px;
+  --radius-24:24px;--radius-full:9999px;
+  --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:20px;
+  --space-6:24px;--space-8:32px;--space-10:40px;--space-16:64px;
+  --d-page-gutter:40px;--d-card-pad:20px;--d-form-gap:16px;--d-row-height:40px;
+  --d-cell-pad-x:14px;--d-cell-pad-y:8px;
+  --elevation-1:0 1px 2px rgba(23,23,23,0.06);
+  --elevation-2:0 2px 8px rgba(23,23,23,0.07),0 1px 2px rgba(0,0,0,0.04);
+  --elevation-overlay:0 12px 32px rgba(0,0,0,0.08),0 0 0 1px rgba(112,115,124,0.10);
+  --font-sans:"Pretendard JP Variable","Pretendard Variable","Pretendard JP","Pretendard",
+    -apple-system,BlinkMacSystemFont,"system-ui","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+  --font-size:16px;--font-weight-normal:400;--font-weight-medium:500;
+}
+html.dark {
+  --background:#111213;--foreground:#F0F1F3;
+  --bg-primary:#1C1D20;--bg-secondary:#111213;--bg-tertiary:#28292E;
+  --bg-sidebar:#0D0E10;--bg-inverse:#F0F1F3;
+  --bg-brand:#178551;--bg-brand-hover:#1C9A61;--bg-brand-press:#25AC6E;--bg-brand-subtle:#0C2B1A;
+  --fg-strong:#F0F1F3;--fg-default:#C4C6CC;--fg-subtle:#9B9EA8;--fg-assistive:#82858F;--fg-disabled:#52555F;
+  --fg-brand:#34C381;--fg-brand-bright:#6FD3A0;
+  --line-default:rgba(255,255,255,0.09);--line-subtle:rgba(255,255,255,0.05);
+  --line-strong:rgba(255,255,255,0.18);--line-accent:#34C381;
+  --input:rgba(255,255,255,0.18);--input-background:#28292E;--ring:#34C381;
+}
+
+/* §4.2 Typography utilities */
+.t-title-1{font-size:32px;line-height:44px;font-weight:700;letter-spacing:-0.81px;}
+.t-title-3{font-size:24px;line-height:32px;font-weight:700;letter-spacing:-0.55px;}
+.t-heading-1{font-size:22px;line-height:30px;font-weight:700;letter-spacing:-0.43px;}
+.t-heading-2{font-size:20px;line-height:28px;font-weight:700;letter-spacing:-0.24px;}
+.t-body-1{font-size:16px;line-height:24px;font-weight:500;}
+.t-body-2{font-size:15px;line-height:22px;font-weight:500;}
+.t-label-1{font-size:14px;line-height:20px;font-weight:600;}
+.t-label-2{font-size:13px;line-height:18px;font-weight:600;}
+.t-caption-1{font-size:12px;line-height:16px;font-weight:600;}
+.t-caption-2{font-size:11px;line-height:14.96px;font-weight:600;}
+
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{font-family:var(--font-sans);background:var(--bg-secondary);color:var(--foreground);font-size:var(--font-size);}
+
+/* =========================================================
+   §9.1 /login — 2단 스플릿 (50/50)
+   ========================================================= */
+.login-root{display:flex;min-height:100vh;}
+
+/* 좌 50% — 그라데이션 그린 + 그리드 + 워드마크 (§9.1) */
+.login-left{
+  flex:1;position:relative;overflow:hidden;
+  /* §9.1: linear-gradient(135deg, #0F5C39, #178551) */
+  background:linear-gradient(135deg,#0F5C39,#178551);
+  display:flex;flex-direction:column;justify-content:center;
+  padding:64px;   /* MD에 좌측 패딩 명시 없음 → --space-16(64) 추측 */
+}
+/* §9.1: SVG 그리드 오버레이 */
+.login-left::before{
+  content:"";position:absolute;inset:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.06) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,0.06) 1px,transparent 1px);
+  background-size:40px 40px;  /* 그리드 간격 MD에 없음 → 추측 40px */
+  pointer-events:none;
+}
+.login-left .wordmark{
+  font-size:28px;font-weight:800;letter-spacing:1px;color:#fff;
+  position:relative;margin-bottom:24px;
+}
+.login-left .wordmark::after{
+  content:"";display:block;width:40px;height:2px;background:rgba(255,255,255,0.5);margin-top:10px;
+}
+/* §9.1: 헤드라인 36px / 700 white */
+.login-left .headline{
+  font-size:36px;font-weight:700;line-height:1.25;color:#fff;position:relative;
+}
+.login-left .subcopy{
+  /* MD에 카피/사이즈 명시 없음 → t-body-2 + 흐린 화이트 추측 */
+  font-size:15px;font-weight:500;line-height:1.5;
+  color:rgba(255,255,255,0.7);position:relative;margin-top:20px;max-width:360px;
+}
+.login-left .copyright{
+  position:absolute;left:64px;bottom:32px;
+  font-size:12px;font-weight:400;color:rgba(255,255,255,0.55);
+}
+
+/* 우 50% — 거의 검정 다크 패널 #0D0E10 (§9.1) */
+.login-right{
+  flex:1;background:#0D0E10;
+  display:flex;align-items:center;justify-content:center;
+}
+.login-form{width:100%;max-width:360px;padding:0 24px;}  /* §9.1: max-width ~360px */
+
+/* 로그인 헤딩 — MD에 로그인 헤딩 사이즈 명시 없음 → t-title-3(24/700) 추측 */
+.login-form h1{color:var(--fg-strong);margin-bottom:8px;}
+.login-form .form-sub{
+  color:var(--fg-assistive);margin-bottom:32px;
+}
+
+/* 폼 필드 간격 §8.13/§8.2: space-y-4 (16px = --d-form-gap) */
+.field{margin-bottom:16px;}
+/* §8.2 필드 라벨: t-caption-1 text-fg-default */
+.field label{display:block;color:var(--fg-default);margin-bottom:8px;}
+
+/* §8.2 Input + §9.1 로그인 글래스 톤 */
+.input-wrap{position:relative;}
+.field input{
+  width:100%;height:40px;border-radius:var(--radius-8);outline:none;
+  transition:all .15s;font-size:13px;font-weight:500;color:#fff;
+  border:1px solid rgba(255,255,255,0.18); /* §8.2 border-line-strong(dark) */
+  padding:0 14px;
+  /* §9.1 로그인 인풋 글래스 톤 */
+  background:rgba(70,90,126,0.4);
+}
+.field input::placeholder{color:var(--fg-assistive);}
+.field input:focus{
+  border-color:var(--fg-brand);            /* §8.2 focus:border-fg-brand */
+  box-shadow:0 0 0 3px rgba(52,195,129,0.2);/* §8.2 focus:ring-[3px] ring-fg-brand/20 */
+}
+/* 비밀번호 토글 §8.2: 36×36 ghost, text-fg-assistive */
+.input-wrap .pw-toggle{
+  position:absolute;right:10px;top:50%;transform:translateY(-50%);
+  width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;
+  border:none;background:transparent;border-radius:var(--radius-6);
+  color:var(--fg-assistive);cursor:pointer;
+}
+.field.pw input{padding-right:56px;} /* §8.2 pr-14 */
+
+/* §8.1 Primary CTA (full width) */
+.btn-primary{
+  width:100%;height:40px;border-radius:var(--radius-8);
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  font-weight:700;font-size:14px;color:#fff;border:none;cursor:pointer;
+  background:var(--bg-brand);transition:background .15s;margin-top:8px;
+}
+.btn-primary:hover{background:var(--bg-brand-hover);}
+.btn-primary:active{background:var(--bg-brand-press);}
+</style>
+</head>
+<body>
+<div class="login-root">
+  <!-- 좌: 브랜드 패널 -->
+  <div class="login-left">
+    <div class="wordmark">XROO</div>
+    <!-- ⚠️ 카피 텍스트는 MD에 없음 (디자인 시스템 범위 밖) — 구조 검증용 재구성 -->
+    <div class="headline">Package Solution<br/>Admin Console</div>
+    <div class="subcopy">패키지 빌드 배포·권한·계정 운영을 한 곳에서.<br/>빠르고 정확한 관리자 환경.</div>
+    <div class="copyright">© 2026 XROO · OLIM PLANET</div>
+  </div>
+
+  <!-- 우: 폼 패널 -->
+  <div class="login-right">
+    <div class="login-form">
+      <h1 class="t-title-3">로그인</h1>
+      <div class="form-sub t-caption-1">관리자 계정으로 콘솔에 접속하세요.</div>
+
+      <div class="field">
+        <label class="t-caption-1">ID</label>
+        <div class="input-wrap">
+          <input type="text" placeholder="아이디를 입력하세요" />
+        </div>
+      </div>
+
+      <div class="field pw">
+        <label class="t-caption-1">PW</label>
+        <div class="input-wrap">
+          <input type="password" placeholder="비밀번호를 입력하세요" />
+          <button class="pw-toggle" aria-label="비밀번호 표시">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <button class="btn-primary">로그인</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

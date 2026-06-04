@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "repro",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["_repro/server.cjs"],
+      "port": 5180
+    }
+  ]
+}
